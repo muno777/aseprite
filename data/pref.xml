@@ -540,8 +540,8 @@
       <option id="next_frames" type="int" default="1" />
       <option id="opacity_base" type="int" default="68" />
       <option id="opacity_step" type="int" default="28" />
-      <option id="type" type="OnionskinType" default="OnionskinType::MERGE" />
-      <option id="loop_tag" type="bool" default="true" />
+      <option id="type" type="OnionskinType" default="OnionskinType::RED_BLUE_TINT" />
+      <option id="loop_tag" type="bool" default="false" />
       <option id="current_layer" type="bool" default="false" />
       <option id="position" type="render::OnionskinPosition" default="render::OnionskinPosition::BEHIND" />
     </section>
