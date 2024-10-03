@@ -45,11 +45,11 @@
 #include "app/ui/expr_entry.h"
 #include "app/ui/icon_button.h"
 #include "app/ui/keyboard_shortcuts.h"
+#include "app/ui/layer_frame_comboboxes.h"
 #include "app/ui/sampling_selector.h"
 #include "app/ui/selection_mode_field.h"
 #include "app/ui/skin/skin_theme.h"
 #include "app/ui_context.h"
-#include "base/fs.h"
 #include "base/pi.h"
 #include "base/scoped_value.h"
 #include "doc/brush.h"
@@ -1260,9 +1260,9 @@ public:
     bool found = false;
     auto ditheringMatrices = App::instance()
       ->extensions().ditheringMatrices();
-    for (const auto& it : ditheringMatrices) {
-      if (it.name() == dynaPref.matrixName()) {
-        m_dynamics.ditheringMatrix = it.matrix();
+    for (const auto* it : ditheringMatrices) {
+      if (it->name() == dynaPref.matrixName()) {
+        m_dynamics.ditheringMatrix = it->matrix();
         found = true;
         break;
       }
@@ -1575,14 +1575,28 @@ private:
       item->setSelected(false);
 
       Menu menu;
-      MenuItem
-        reset(Strings::symmetry_reset_position());
-      menu.addChild(&reset);
+      MenuItem resetToCenter(Strings::symmetry_reset_position());
+      MenuItem resetToViewCenter(Strings::symmetry_reset_position_to_view_center());
 
-      reset.Click.connect(
+      menu.addChild(&resetToCenter);
+      menu.addChild(&resetToViewCenter);
+
+      resetToCenter.Click.connect(
         [doc, &docPref]{
           docPref.symmetry.xAxis(doc->sprite()->width()/2.0);
           docPref.symmetry.yAxis(doc->sprite()->height()/2.0);
+          // Redraw symmetry rules
+          doc->notifyGeneralUpdate();
+        });
+
+      resetToViewCenter.Click.connect(
+        [doc, &docPref]{
+          auto* editor = Editor::activeEditor();
+          const gfx::Rect& bounds = editor->getViewportBounds();
+          double xViewPosition = bounds.x + bounds.w/2.0;
+          double yViewPosition = bounds.y + bounds.h/2.0;
+          docPref.symmetry.xAxis(xViewPosition);
+          docPref.symmetry.yAxis(yViewPosition);
           // Redraw symmetry rules
           doc->notifyGeneralUpdate();
         });
@@ -1738,19 +1752,8 @@ private:
   void fillSlices() {
     m_combobox.deleteAllItems();
     if (m_doc && m_doc->sprite()) {
-      MatchWords match(m_filter);
-
-      std::vector<doc::Slice*> slices;
-      for (auto slice : m_doc->sprite()->slices()) {
-        if (match(slice->name()))
-          slices.push_back(slice);
-      }
-      std::sort(slices.begin(), slices.end(),
-                [](const doc::Slice* a, const doc::Slice* b){
-                  return (base::compare_filenames(a->name(), b->name()) < 0);
-                });
-
-      for (auto slice : slices) {
+      for (auto* slice : sort_slices_by_name(m_doc->sprite()->slices(),
+                                             MatchWords(m_filter))) {
         Item* item = new Item(slice);
         m_combobox.addItem(item);
       }
